@@ -15,6 +15,7 @@ class DarwinInitializationSettings {
     this.defaultPresentBadge = true,
     this.defaultPresentBanner = true,
     this.defaultPresentList = true,
+    this.defaultUseCommunicationIntent = true,
     this.notificationCategories = const <DarwinNotificationCategory>[],
   });
 
@@ -122,6 +123,18 @@ class DarwinInitializationSettings {
   /// On iOS, this property is only applicable to iOS 14 or newer.
   /// On macOS, this property is only applicable to macOS 11 or newer.
   final bool defaultPresentList;
+
+  /// Configures the default setting on if the notification should be
+  /// presented as a communication intent when a notification is triggered while
+  /// app is in the foreground.
+  ///
+  /// Corresponds to https://developer.apple.com/documentation/intents/insendmessageintent
+  ///
+  /// Default value is true.
+  ///
+  /// On iOS, this property is only applicable to iOS 15 or newer.
+  /// On macOS, this property is only applicable to macOS 12 or newer.
+  final bool defaultUseCommunicationIntent;
 
   /// Configure the notification categories ([DarwinNotificationCategory])
   /// available. This allows for fine-tuning of preview display.

@@ -43,6 +43,7 @@ extension DarwinInitializationSettingsMapper on DarwinInitializationSettings {
         'defaultPresentBadge': defaultPresentBadge,
         'defaultPresentBanner': defaultPresentBanner,
         'defaultPresentList': defaultPresentList,
+        'defaultUseCommunicationIntent': defaultUseCommunicationIntent,
         'notificationCategories': notificationCategories
             .map((e) => e.toMap()) // ignore: always_specify_types
             .toList(),

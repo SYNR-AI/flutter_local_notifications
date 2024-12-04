@@ -2,6 +2,7 @@
 #import "ActionEventSink.h"
 #import "Converters.h"
 #import "FlutterEngineManager.h"
+@import Intents;
 
 @implementation FlutterLocalNotificationsPlugin {
   FlutterMethodChannel *_channel;
@@ -52,6 +53,7 @@ NSString *const DEFAULT_PRESENT_SOUND = @"defaultPresentSound";
 NSString *const DEFAULT_PRESENT_BADGE = @"defaultPresentBadge";
 NSString *const DEFAULT_PRESENT_BANNER = @"defaultPresentBanner";
 NSString *const DEFAULT_PRESENT_LIST = @"defaultPresentList";
+NSString *const DEFAULT_USE_COMMUNICATIONINTENT = @"defaultUseCommunicationIntent";
 NSString *const SOUND_PERMISSION = @"sound";
 NSString *const ALERT_PERMISSION = @"alert";
 NSString *const BADGE_PERMISSION = @"badge";
@@ -79,6 +81,7 @@ NSString *const PRESENT_BADGE = @"presentBadge";
 NSString *const PRESENT_BANNER = @"presentBanner";
 NSString *const PRESENT_LIST = @"presentList";
 NSString *const BADGE_NUMBER = @"badgeNumber";
+NSString *const COMMUNICATION_INTENT = @"communicationIntent";
 NSString *const MILLISECONDS_SINCE_EPOCH = @"millisecondsSinceEpoch";
 NSString *const REPEAT_INTERVAL = @"repeatInterval";
 NSString *const REPEAT_INTERVAL_MILLISECODNS = @"repeatIntervalMilliseconds";
@@ -344,26 +347,30 @@ static FlutterError *getFlutterError(NSError *error) {
         [NSNumber numberWithBool:[[arguments objectForKey:DEFAULT_PRESENT_ALERT]
                                      boolValue]];
   }
-  if ([self containsKey:DEFAULT_PRESENT_SOUND forDictionary:arguments]) {
-    presentationOptions[PRESENT_SOUND] =
+    if ([self containsKey:DEFAULT_PRESENT_SOUND forDictionary:arguments]) {
+        presentationOptions[PRESENT_SOUND] =
         [NSNumber numberWithBool:[[arguments objectForKey:DEFAULT_PRESENT_SOUND]
-                                     boolValue]];
-  }
-  if ([self containsKey:DEFAULT_PRESENT_BADGE forDictionary:arguments]) {
-    presentationOptions[PRESENT_BADGE] =
+                                  boolValue]];
+    }
+    if ([self containsKey:DEFAULT_PRESENT_BADGE forDictionary:arguments]) {
+        presentationOptions[PRESENT_BADGE] =
         [NSNumber numberWithBool:[[arguments objectForKey:DEFAULT_PRESENT_BADGE]
-                                     boolValue]];
-  }
-  if ([self containsKey:DEFAULT_PRESENT_BANNER forDictionary:arguments]) {
-    presentationOptions[PRESENT_BANNER] = [NSNumber
-        numberWithBool:[[arguments objectForKey:DEFAULT_PRESENT_BANNER]
-                           boolValue]];
-  }
-  if ([self containsKey:DEFAULT_PRESENT_LIST forDictionary:arguments]) {
-    presentationOptions[PRESENT_LIST] =
+                                  boolValue]];
+    }
+    if ([self containsKey:DEFAULT_PRESENT_BANNER forDictionary:arguments]) {
+        presentationOptions[PRESENT_BANNER] = [NSNumber
+                                               numberWithBool:[[arguments objectForKey:DEFAULT_PRESENT_BANNER]
+                                                               boolValue]];
+    }
+    if ([self containsKey:DEFAULT_PRESENT_LIST forDictionary:arguments]) {
+        presentationOptions[PRESENT_LIST] =
         [NSNumber numberWithBool:[[arguments objectForKey:DEFAULT_PRESENT_LIST]
-                                     boolValue]];
-  }
+                                  boolValue]];
+    }
+    if ([self containsKey: DEFAULT_USE_COMMUNICATIONINTENT forDictionary:arguments]) {
+        presentationOptions[COMMUNICATION_INTENT] = [NSNumber numberWithBool:[[arguments objectForKey:DEFAULT_USE_COMMUNICATIONINTENT]
+                                                                              boolValue]];
+    }
   [[NSUserDefaults standardUserDefaults]
       setObject:presentationOptions
          forKey:PRESENTATION_OPTIONS_USER_DEFAULTS];
@@ -520,7 +527,7 @@ static FlutterError *getFlutterError(NSError *error) {
 
 - (void)show:(NSDictionary *_Nonnull)arguments
       result:(FlutterResult _Nonnull)result API_AVAILABLE(ios(10.0)) {
-  UNMutableNotificationContent *content =
+  UNNotificationContent *content =
       [self buildStandardNotificationContent:arguments result:result];
   [self addNotificationRequest:[self getIdentifier:arguments]
                        content:content
@@ -530,7 +537,7 @@ static FlutterError *getFlutterError(NSError *error) {
 
 - (void)zonedSchedule:(NSDictionary *_Nonnull)arguments
                result:(FlutterResult _Nonnull)result API_AVAILABLE(ios(10.0)) {
-  UNMutableNotificationContent *content =
+  UNNotificationContent *content =
       [self buildStandardNotificationContent:arguments result:result];
   UNCalendarNotificationTrigger *trigger =
       [self buildUserNotificationCalendarTrigger:arguments];
@@ -543,7 +550,7 @@ static FlutterError *getFlutterError(NSError *error) {
 - (void)periodicallyShow:(NSDictionary *_Nonnull)arguments
                   result:(FlutterResult _Nonnull)result
     API_AVAILABLE(ios(10.0)) {
-  UNMutableNotificationContent *content =
+  UNNotificationContent *content =
       [self buildStandardNotificationContent:arguments result:result];
   UNTimeIntervalNotificationTrigger *trigger =
       [self buildUserNotificationTimeIntervalTrigger:arguments];
@@ -572,7 +579,7 @@ static FlutterError *getFlutterError(NSError *error) {
   result(nil);
 }
 
-- (UNMutableNotificationContent *)
+- (UNNotificationContent *)
     buildStandardNotificationContent:(NSDictionary *)arguments
                               result:(FlutterResult _Nonnull)result
     API_AVAILABLE(ios(10.0)) {
@@ -592,13 +599,16 @@ static FlutterError *getFlutterError(NSError *error) {
   bool presentBadge = false;
   bool presentBanner = false;
   bool presentList = false;
+    bool userCommunicationIntent = false;
   if (persistedPresentationOptions != nil) {
     presentAlert = [persistedPresentationOptions[PRESENT_ALERT] isEqual:@YES];
     presentSound = [persistedPresentationOptions[PRESENT_SOUND] isEqual:@YES];
     presentBadge = [persistedPresentationOptions[PRESENT_BADGE] isEqual:@YES];
     presentBanner = [persistedPresentationOptions[PRESENT_BANNER] isEqual:@YES];
     presentList = [persistedPresentationOptions[PRESENT_LIST] isEqual:@YES];
+    userCommunicationIntent = [persistedPresentationOptions[COMMUNICATION_INTENT] isEqual: @YES];
   }
+  NSString *thumbnialFilePath = NULL;
   if (arguments[PLATFORM_SPECIFICS] != [NSNull null]) {
     NSDictionary *platformSpecifics = arguments[PLATFORM_SPECIFICS];
     if ([self containsKey:PRESENT_ALERT forDictionary:platformSpecifics]) {
@@ -620,6 +630,9 @@ static FlutterError *getFlutterError(NSError *error) {
     if ([self containsKey:BADGE_NUMBER forDictionary:platformSpecifics]) {
       content.badge = [platformSpecifics objectForKey:BADGE_NUMBER];
     }
+    if ([self containsKey:COMMUNICATION_INTENT forDictionary:platformSpecifics]) {
+      userCommunicationIntent = [platformSpecifics objectForKey:COMMUNICATION_INTENT];
+    }
     if ([self containsKey:THREAD_IDENTIFIER forDictionary:platformSpecifics]) {
       content.threadIdentifier = platformSpecifics[THREAD_IDENTIFIER];
     }
@@ -638,6 +651,7 @@ static FlutterError *getFlutterError(NSError *error) {
             [options
                 setObject:hideThumbnail
                    forKey:UNNotificationAttachmentOptionsThumbnailHiddenKey];
+              thumbnialFilePath = attachment[ATTACHMENT_FILE_PATH];
           }
           if ([self containsKey:ATTACHMENT_THUMBNAIL_CLIPPING_RECT
                   forDictionary:attachment]) {
@@ -707,6 +721,14 @@ static FlutterError *getFlutterError(NSError *error) {
                            presentBanner:presentBanner
                              presentList:presentList
                                  payload:arguments[PAYLOAD]];
+    
+    if (userCommunicationIntent && thumbnialFilePath != NULL) {
+        if (@available(iOS 15.0, *)) {
+            INSendMessageIntent *inIntent = [self buildINIntent:content.title subTitle:content.subtitle body:content.body avatar: thumbnialFilePath];
+            UNNotificationContent *communicatiionContent = [content contentByUpdatingWithProvider:inIntent error: nil];
+            return communicatiionContent;
+        }
+    }
   return content;
 }
 
@@ -827,8 +849,53 @@ static FlutterError *getFlutterError(NSError *error) {
   return userDict;
 }
 
+- (INSendMessageIntent *)buildINIntent:(NSString *)title subTitle: (NSString *)subTitle body: (NSString *)body avatar:(NSString *)filePath  API_AVAILABLE(ios(15.0)) {
+    NSURL *avatarUrl = [NSURL fileURLWithPath:filePath];
+    if (avatarUrl == NULL) {
+        return NULL;
+    }
+    INImage *avatar = [INImage imageWithURL:avatarUrl];
+    INPersonHandle *messageSenderPersonHandle = [[INPersonHandle alloc] initWithValue:@"" type:INPersonHandleTypeUnknown];
+    NSPersonNameComponents *components = [[NSPersonNameComponents alloc] init];
+    INPerson *messageSender = [[INPerson alloc] initWithPersonHandle:messageSenderPersonHandle
+                                                      nameComponents:components
+                                                         displayName:title
+                                                               image:avatar
+                                                   contactIdentifier:nil
+                                                    customIdentifier:nil
+                                                                isMe:NO
+                                                      suggestionType:INPersonSuggestionTypeNone];
+    
+    INPersonHandle *mePersonHandle = [[INPersonHandle alloc] initWithValue:@"" type:INPersonHandleTypeUnknown];
+    INPerson *mePerson = [[INPerson alloc] initWithPersonHandle:mePersonHandle
+                                                 nameComponents:nil
+                                                    displayName:nil
+                                                          image:nil
+                                              contactIdentifier:nil
+                                               customIdentifier:nil
+                                                           isMe:YES
+                                                 suggestionType:INPersonSuggestionTypeNone];
+    
+    
+    INSpeakableString *speakableString = [[INSpeakableString alloc] initWithSpokenPhrase:subTitle];
+    INSendMessageIntent *intent = [[INSendMessageIntent alloc] initWithRecipients:@[mePerson]
+                                                              outgoingMessageType:INOutgoingMessageTypeOutgoingMessageText
+                                                                          content:body
+                                                               speakableGroupName:speakableString
+                                                           conversationIdentifier:nil
+                                                                      serviceName:nil
+                                                                           sender:messageSender
+                                                                      attachments:nil];
+    
+    [intent setImage:avatar forParameterNamed:@"sender"];
+    INInteraction *interaction = [[INInteraction alloc] initWithIntent:intent response:nil];
+    interaction.direction = INInteractionDirectionIncoming;
+    [interaction donateInteractionWithCompletion:nil];
+    return intent;
+}
+
 - (void)addNotificationRequest:(NSString *)identifier
-                       content:(UNMutableNotificationContent *)content
+                       content:(UNNotificationContent *)content
                         result:(FlutterResult _Nonnull)result
                        trigger:(UNNotificationTrigger *)trigger
     API_AVAILABLE(ios(10.0)) {
